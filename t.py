@@ -52,8 +52,10 @@ def _task_from_taskline(taskline):
     and other metadata will be generated when the line is read.  This is
     supported to enable editing of the taskfile with a simple text editor.
     """
-    if '|' in taskline:
-        text, _, meta = taskline.partition('|')
+    if taskline.strip().startswith('#'):
+        return None
+    elif '|' in taskline:
+        text, _, meta = taskline.rpartition('|')
         task = { 'text': text.strip() }
         for piece in meta.strip().split(','):
             label, data = piece.split(':')
@@ -147,7 +149,8 @@ class TaskDict(object):
                     tls = [tl.strip() for tl in tfile if tl]
                     tasks = map(_task_from_taskline, tls)
                     for task in tasks:
-                        getattr(self, kind)[task['id']] = task
+                        if task is not None:
+                            getattr(self, kind)[task['id']] = task
 
     def __getitem__(self, prefix):
         """Return the unfinished task with the given prefix.
@@ -207,6 +210,17 @@ class TaskDict(object):
             task['finish_ts'] = str(int(time.time()))
         self.done[task['id']] = task
 
+    def remove_task(self, prefix):
+        """Remove the task from tasks list.
+
+        If more than one task matches the prefix an AmbiguousPrefix exception
+        will be raised, if no tasks match it an UnknownPrefix exception will
+        be raised.
+
+        """
+        self.tasks.pop(self[prefix]['id'])
+
+
     def print_list(self, kind='tasks', verbose=False, quiet=False, grep='',
                    track_time=False):
         """Print out a nicely formatted list of unfinished tasks."""
@@ -264,6 +278,8 @@ def _build_parser():
                        help="edit TASK to contain TEXT", metavar="TASK")
     actions.add_option("-f", "--finish", dest="finish",
                        help="mark TASK as finished", metavar="TASK")
+    actions.add_option("-r", "--remove", dest="remove",
+                       help="Remove TASK from list", metavar="TASK")
     parser.add_option_group(actions)
 
     config = OptionGroup(parser, "Configuration Options")
@@ -305,6 +321,9 @@ def _main():
         if options.finish:
             td.finish_task(options.finish, track_time=options.track_time)
             td.write(options.delete)
+        elif options.remove:
+            td.remove_task(options.remove)
+            td.write(options.delete)
         elif options.edit:
             td.edit_task(options.edit, text)
             td.write(options.delete)
@@ -316,9 +335,9 @@ def _main():
             td.print_list(kind=kind, verbose=options.verbose, quiet=options.quiet,
                           grep=options.grep, track_time=options.track_time)
     except AmbiguousPrefix, e:
-        sys.stderr.write('The ID "%s" matches more than one task.' % e.prefix)
+        sys.stderr.write('The ID "%s" matches more than one task.\n' % e.prefix)
     except UnknownPrefix, e:
-        sys.stderr.write('The ID "%s" does not match any task.' % e.prefix)
+        sys.stderr.write('The ID "%s" does not match any task.\n' % e.prefix)
 
 
 if __name__ == '__main__':
