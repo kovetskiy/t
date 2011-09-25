@@ -238,7 +238,7 @@ class TaskDict(object):
             tl = 'add_ts' if kind == 'tasks' else 'finish_ts'
             for task in tasks.values():
                 task['time'] = _format_time(task[tl]) if tl in task else ''
-            tlen = max(len(t['time']) for t in tasks.values())
+            tlen = max(len(t['time']) for t in tasks.values()) if tasks else 0
             sorted_tasks = sorted(
                 sorted_tasks,
                 key=lambda i: int(i[1][tl]) if tl in i[1] else 0,
