@@ -249,7 +249,7 @@ class TaskDict(object):
                 p = '%s - ' % task[label].ljust(plen) if not quiet else ''
                 if track_time and tlen:
                     p += '%s - ' % task['time'].ljust(tlen)
-                print p + task['text']
+                print(p + task['text'])
 
     def write(self, delete_if_empty=False):
         """Flush the finished and unfinished tasks to the files on disk."""
@@ -334,9 +334,9 @@ def _main():
             kind = 'tasks' if not options.done else 'done'
             td.print_list(kind=kind, verbose=options.verbose, quiet=options.quiet,
                           grep=options.grep, track_time=options.track_time)
-    except AmbiguousPrefix, e:
+    except AmbiguousPrefix as e:
         sys.stderr.write('The ID "%s" matches more than one task.\n' % e.prefix)
-    except UnknownPrefix, e:
+    except UnknownPrefix as e:
         sys.stderr.write('The ID "%s" does not match any task.\n' % e.prefix)
 
 

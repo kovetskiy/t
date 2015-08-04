@@ -1,9 +1,10 @@
-This is fork of `t`
+This is maintanable fork of `t`
 ==================
 
 ## Changelog
 - [x] Merged pull request with rehashing id
-- [x] Created pkgbuild for Arch Linux (see `pkgbuild` branch)
+- [x] Created pkgbuild for Arch Linux (`pkgbuild` branch) https://aur4.archlinux.org/packages/python-todo-t/
+- [x] Fix Python3 issues
 
 =======
 
