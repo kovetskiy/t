@@ -1,6 +1,6 @@
 # Maintainer: Egor Kovetskiy <e.kovetskiy@gmail.com>
 pkgname=python-todo-t
-pkgver=83.f6ce607
+pkgver=85.6422833
 pkgrel=1
 pkgdesc="Command-line todo list manager"
 url="https://github.com/kovetskiy/t"
