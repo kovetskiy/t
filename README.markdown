@@ -1,4 +1,10 @@
-t
+This is fork of `t`
+==================
+
+## Changelog
+- [x] Merged pull request with rehashing id
+- [x] Created pkgbuild for Arch Linux (see `pkgbuild` branch)
+
 =======
 
 `t` is a command-line todo list manager for people that want to *finish* tasks,
