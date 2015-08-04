@@ -33,7 +33,7 @@ def _hash(text):
     Currently SHA1 hashing is used.  It should be plenty for our purposes.
 
     """
-    return hashlib.sha1(text).hexdigest()
+    return hashlib.sha1(text.encode('utf-8')).hexdigest()
 
 def _task_from_taskline(taskline):
     """Parse a taskline (from a task file) and return a task.
@@ -161,13 +161,13 @@ class TaskDict(object):
         If no tasks match the prefix an UnknownPrefix exception will be raised.
 
         """
-        matched = filter(lambda tid: tid.startswith(prefix), self.tasks.keys())
+        matched = [tid for tid in self.tasks.keys() if tid.startswith(prefix)]
         if len(matched) == 1:
             return self.tasks[matched[0]]
         elif len(matched) == 0:
             raise UnknownPrefix(prefix)
         else:
-            matched = filter(lambda tid: tid == prefix, self.tasks.keys())
+            matched = [tid for tid in self.tasks.keys() if tid == prefix]
             if len(matched) == 1:
                 return self.tasks[matched[0]]
             else:
@@ -334,9 +334,11 @@ def _main():
             kind = 'tasks' if not options.done else 'done'
             td.print_list(kind=kind, verbose=options.verbose, quiet=options.quiet,
                           grep=options.grep, track_time=options.track_time)
-    except AmbiguousPrefix as e:
+    except AmbiguousPrefix:
+        e = sys.exc_info()[1]
         sys.stderr.write('The ID "%s" matches more than one task.\n' % e.prefix)
-    except UnknownPrefix as e:
+    except UnknownPrefix:
+        e = sys.exc_info()[1]
         sys.stderr.write('The ID "%s" does not match any task.\n' % e.prefix)
 
 
