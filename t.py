@@ -5,6 +5,7 @@
 from __future__ import with_statement
 
 import os, re, sys, hashlib
+import time, datetime
 from operator import itemgetter
 from optparse import OptionParser, OptionGroup
 
@@ -114,6 +115,16 @@ def _prefixes(ids):
         del ps['']
     return ps
 
+def _format_time(ts):
+    """Simple time formatting"""
+    dt = datetime.datetime.fromtimestamp(int(ts))
+    today = datetime.date.today()
+    fmt = ' '.join(filter(None, [
+        '%Y' if dt.year != today.year else '',
+        '%b %d' if (dt.month, dt.day) != (today.month, today.day) else '',
+        '%H:%M'
+    ]))
+    return dt.strftime(fmt)
 
 class TaskDict(object):
     """A set of tasks, both finished and unfinished, for a given list.
@@ -162,10 +173,12 @@ class TaskDict(object):
             else:
                 raise AmbiguousPrefix(prefix)
 
-    def add_task(self, text):
+    def add_task(self, text, track_time=False):
         """Add a new, unfinished task with the given summary text."""
         task_id = _hash(text)
         self.tasks[task_id] = {'id': task_id, 'text': text}
+        if track_time:
+            self.tasks[task_id]['add_ts'] = str(int(time.time()))
 
     def edit_task(self, prefix, text):
         """Edit the task with the given prefix.
@@ -184,7 +197,7 @@ class TaskDict(object):
 
         task['text'] = text
 
-    def finish_task(self, prefix):
+    def finish_task(self, prefix, track_time=False):
         """Mark the task with the given prefix as finished.
 
         If more than one task matches the prefix an AmbiguousPrefix exception
@@ -193,6 +206,8 @@ class TaskDict(object):
 
         """
         task = self.tasks.pop(self[prefix]['id'])
+        if track_time:
+            task['finish_ts'] = str(int(time.time()))
         self.done[task['id']] = task
 
     def remove_task(self, prefix):
@@ -206,7 +221,8 @@ class TaskDict(object):
         self.tasks.pop(self[prefix]['id'])
 
 
-    def print_list(self, kind='tasks', verbose=False, quiet=False, grep=''):
+    def print_list(self, kind='tasks', verbose=False, quiet=False, grep='',
+                   track_time=False):
         """Print out a nicely formatted list of unfinished tasks."""
         tasks = dict(getattr(self, kind).items())
         label = 'prefix' if not verbose else 'id'
@@ -215,10 +231,24 @@ class TaskDict(object):
             for task_id, prefix in _prefixes(tasks).items():
                 tasks[task_id]['prefix'] = prefix
 
+        sorted_tasks = sorted(tasks.items())
+
         plen = max(map(lambda t: len(t[label]), tasks.values())) if tasks else 0
-        for _, task in sorted(tasks.items()):
+        if track_time:
+            tl = 'add_ts' if kind == 'tasks' else 'finish_ts'
+            for task in tasks.values():
+                task['time'] = _format_time(task[tl]) if tl in task else ''
+            tlen = max(len(t['time']) for t in tasks.values()) if tasks else 0
+            sorted_tasks = sorted(
+                sorted_tasks,
+                key=lambda i: int(i[1][tl]) if tl in i[1] else 0,
+                reverse=True)
+
+        for _, task in sorted_tasks:
             if grep.lower() in task['text'].lower():
                 p = '%s - ' % task[label].ljust(plen) if not quiet else ''
+                if track_time and tlen:
+                    p += '%s - ' % task['time'].ljust(tlen)
                 print p + task['text']
 
     def write(self, delete_if_empty=False):
@@ -260,6 +290,8 @@ def _build_parser():
     config.add_option("-d", "--delete-if-empty",
                       action="store_true", dest="delete", default=False,
                       help="delete the task file if it becomes empty")
+    config.add_option("--track-time", action="store_true", dest="track_time",
+                      default=False, help="save and display time of adding tasks")
     parser.add_option_group(config)
 
     output = OptionGroup(parser, "Output Options")
@@ -287,7 +319,7 @@ def _main():
 
     try:
         if options.finish:
-            td.finish_task(options.finish)
+            td.finish_task(options.finish, track_time=options.track_time)
             td.write(options.delete)
         elif options.remove:
             td.remove_task(options.remove)
@@ -296,12 +328,12 @@ def _main():
             td.edit_task(options.edit, text)
             td.write(options.delete)
         elif text:
-            td.add_task(text)
+            td.add_task(text, track_time=options.track_time)
             td.write(options.delete)
         else:
             kind = 'tasks' if not options.done else 'done'
             td.print_list(kind=kind, verbose=options.verbose, quiet=options.quiet,
-                          grep=options.grep)
+                          grep=options.grep, track_time=options.track_time)
     except AmbiguousPrefix, e:
         sys.stderr.write('The ID "%s" matches more than one task.\n' % e.prefix)
     except UnknownPrefix, e:
